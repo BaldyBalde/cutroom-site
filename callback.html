@@ -1,6 +1,10 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><title>Cutroom · connecting</title><link rel="stylesheet" href="style.css">
 <script>
-// TikTok sends the login result here (a public https address is required).
-// Hand it straight to the Cutroom app running on this computer.
-location.replace("http://127.0.0.1:8790/tiktok/callback" + location.search);
-</script></head><body><main><h1>Connecting…</h1><p class="sub">Handing TikTok's answer to the Cutroom app on this computer. If nothing happens, make sure the app is running and <a href="#" onclick="location.reload()">try again</a>.</p></main></body></html>
+// TikTok sends the login result here. Hand the code to the Cutroom app on this computer, then show the app page.
+(async () => {
+  try {
+    const r = await fetch("http://127.0.0.1:8790/exchange" + location.search); const j = await r.json();
+    if (j.ok) location.replace("app.html"); else document.body.innerHTML = "<main><h1>Could not connect</h1><p>" + (j.error || "unknown error") + "</p></main>";
+  } catch (e) { document.body.innerHTML = "<main><h1>Could not connect</h1><p>The Cutroom app is not running on this computer.</p></main>"; }
+})();
+</script></head><body><main><h1>Connecting…</h1><p class="sub">Handing TikTok's answer to the Cutroom app on this computer.</p></main></body></html>

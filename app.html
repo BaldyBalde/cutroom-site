@@ -1,0 +1,27 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Cutroom for TikTok</title><link rel="stylesheet" href="style.css">
+<style>.btn{display:inline-block;background:#f2b350;color:#0f1115;border:0;border-radius:10px;padding:12px 18px;font-weight:700;text-decoration:none;font-size:16px;cursor:pointer}
+.card{border:1px solid #2a2d35;border-radius:12px;padding:14px 16px;margin:12px 0;display:flex;gap:14px;align-items:center}.card img{width:64px;height:114px;object-fit:cover;border-radius:6px;background:#222}
+.ok{color:#8fd694}.bad{color:#f28b82}.who img{width:44px;height:44px;border-radius:50%;vertical-align:middle;margin-right:10px}input{width:100%;padding:10px;border-radius:8px;border:1px solid #2a2d35;background:#1b1e26;color:#e8e6df;margin:6px 0}</style></head>
+<body><main><nav><a href="index.html">Cutroom</a><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a></nav>
+<h1>Cutroom for TikTok</h1><p class="sub">Short clips from long videos, posted to your own TikTok when you say so.</p>
+<div id="view"><p class="sub">Connecting to the Cutroom app on this computer…</p></div>
+<script>
+const API = "http://127.0.0.1:8790"; const view = document.getElementById("view");
+const esc = s => String(s || "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+async function get(p) { const r = await fetch(API + p); return r.json(); }
+async function post(p, b) { const r = await fetch(API + p, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(b)}); return r.json(); }
+async function main() {
+  let cfg; try { cfg = await get("/config"); } catch (e) { view.innerHTML = "<p class='bad'>The Cutroom app is not running on this computer.</p>"; return; }
+  if (!cfg.client_key) { view.innerHTML = `<h2>Set up</h2><p class="sub">Paste the app's client key and secret from the TikTok developer portal. They are stored on this computer only.</p><input id="k" placeholder="Client key"><input id="s" placeholder="Client secret" type="password"><p><button class="btn" id="save">Save</button></p>`;
+    document.getElementById("save").onclick = async () => { await post("/setup", {key: k.value, secret: s.value}); location.reload(); }; return; }
+  if (!cfg.connected) { view.innerHTML = `<p>Connect the TikTok account you want to post to. Cutroom asks only to see your name and avatar and to publish videos you choose.</p><p><a class="btn" href="${esc(cfg.login_url)}">Log in with TikTok</a></p>`; return; }
+  let me = {}; try { me = await get("/me"); } catch (e) {}
+  const clips = await get("/clips");
+  view.innerHTML = `<p class="who"><img src="${esc(me.avatar_url || "")}">Connected as <b>${esc(me.display_name || "?")}</b></p><h2>Clips ready to post</h2>` +
+    (clips.length ? clips.map(c => `<div class="card"><img src="${c.thumb ? API + c.thumb : ""}"><div><b>${esc(c.title)}</b><br><span class="sub">${esc(c.source)}</span></div><button class="btn" style="margin-left:auto" data-job="${esc(c.job)}" data-n="${c.n}">Post to TikTok</button></div>`).join("") : "<p class='sub'>Nothing ready right now.</p>") + `<p id="out"></p>`;
+  view.querySelectorAll("button[data-job]").forEach(b => b.onclick = async () => { b.disabled = true; b.textContent = "Posting…"; const out = document.getElementById("out"); out.textContent = "Sending the clip to TikTok…";
+    const r = await post("/post", {job: b.dataset.job, n: +b.dataset.n});
+    out.innerHTML = r.ok ? `<span class="ok">Posted: ${esc(r.title)} (${esc(r.status)}). Until TikTok reviews this app, posts are private to the account.</span>` : `<span class="bad">Not posted: ${esc(r.error)}</span>`; b.textContent = r.ok ? "Posted" : "Post to TikTok"; b.disabled = !!r.ok; });
+}
+main();
+</script></main></body></html>
